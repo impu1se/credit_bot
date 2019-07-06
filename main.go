@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	tgbotapi "github.com/Syfaro/telegram-bot-api"
 )
@@ -73,7 +74,7 @@ func main() {
 		log.Printf("Telegram callback failed: %s", info.LastErrorMessage)
 	}
 	updates := bot.ListenForWebhook("/" )
-	go http.ListenAndServe(":80", nil)
+	go http.ListenAndServe(":" + os.Getenv("PORT"), nil)
 	fmt.Println("Start serve")
 	for update := range updates {
 

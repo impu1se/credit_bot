@@ -31,7 +31,7 @@ Metrokredit - первый заём под 0% на 15 дней
 
 Совет: Чтобы увеличить вероятность и скорость одобрения займа, оставьте анкеты сразу в нескольких компаниях!✊
 `
-	ngrok = "https://3073b5ba.ngrok.io/"
+	url = "https://mysterious-woodland-23829.herokuapp.com/"
 )
 
 var firstBtn = tgbotapi.NewReplyKeyboard(
@@ -61,7 +61,7 @@ func main() {
 
 	bot.Debug = true
 	log.Printf("Authorized on account %s", bot.Self.UserName)
-	_, err = bot.SetWebhook(tgbotapi.NewWebhook(ngrok + bot.Token))
+	_, err = bot.SetWebhook(tgbotapi.NewWebhook(url + bot.Token))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func main() {
 		log.Printf("Telegram callback failed: %s", info.LastErrorMessage)
 	}
 	updates := bot.ListenForWebhook("/" + bot.Token)
-	go http.ListenAndServe(":8081", nil)
+	go http.ListenAndServe(":80", nil)
 	fmt.Println("Start serve")
 	for update := range updates {
 

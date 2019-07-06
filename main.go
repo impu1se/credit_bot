@@ -83,6 +83,13 @@ P.S. Мы заинтересованы в том, чтобы вы получил
 
 ⬇️⬇️⬇️`
 
+	afterStart = `
+Здравствуйте, %v!
+Проанализировав ваш профиль предлагаем займ у нашего партнера Е - капуста.
+Для моментального, автоматического получения до 30.000 ₽ под 0 %% (сколько взяли столько и отдаете) до 30 дней оставьте заявку здесь: https://bit.ly/2YEuzyi (нажмите на ссылку)
+
+💬 Или начните подбор других займов.`
+
 	url = "https://mysterious-woodland-23829.herokuapp.com/"
 )
 
@@ -136,7 +143,7 @@ func main() {
 		if update.Message.IsCommand() {
 			switch update.Message.Command() {
 			case "start":
-				msg := tgbotapi.NewMessage(chatID, "Hello!")
+				msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(afterStart, update.Message.Chat.UserName))
 				msg.ReplyMarkup = firstBtn
 				if _, err := bot.Send(msg); err != nil {
 					panic(err)

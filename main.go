@@ -5,11 +5,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	tgbotapi "github.com/Syfaro/telegram-bot-api"
 )
 
 const (
+	url      = "https://credit-bot-for-yan.herokuapp.com/"
 	apiToken = "843667644:AAEB7-te7PfsX2depO8nkeU3ZvNbEyDVpIk"
 	credit30 = `
 Ниже представлены компании подходящие под ваш запрос.
@@ -89,8 +91,25 @@ P.S. Мы заинтересованы в том, чтобы вы получил
 Для моментального, автоматического получения до 30.000 ₽ под 0 %% (сколько взяли столько и отдаете) до 30 дней оставьте заявку здесь: https://bit.ly/2YEuzyi (нажмите на ссылку)
 
 💬 Или начните подбор других займов.`
+	timerText = `
+💳⁣ ЗАЙМ БЕЗ ПРОЦЕНТОВ 📢
+Да-да, сколько взяли, столько отдали. Процентов - НЕТ❗️
 
-	url = "https://mysterious-woodland-23829.herokuapp.com/"
+📌 Шанс одобрения 98% 
+📌 Нету процента по переплатам
+📌 Самые проверенные предложения на рынке
+
+Оформите заявку за 1 минуту прямо сейчас 👇
+
+E-zaem - первый займ до 15 000 руб. без переплат
+➡️ https://bit.ly/2YAhdTD (нажмите на ссылку)
+
+Е-Капуста - первый займ до 30 000 руб. без переплаты
+➡️ https://bit.ly/2YEuzyi (нажмите на ссылку)
+
+CreditPlus - первый займ до 15 000 руб. без переплаты
+➡️ https://bit.ly/2Xx1atp (нажмите на ссылку)
+`
 )
 
 var firstBtn = tgbotapi.NewReplyKeyboard(
@@ -131,53 +150,86 @@ func main() {
 	if info.LastErrorDate != 0 {
 		log.Printf("Telegram callback failed: %s", info.LastErrorMessage)
 	}
-	updates := bot.ListenForWebhook("/" )
-	go http.ListenAndServe(":" + os.Getenv("PORT"), nil)
+
+	var counter int64
+	lastUpdate := make(map[int64]time.Time)
+	ticker := time.NewTicker(1 * time.Hour)
+
+	updates := bot.ListenForWebhook("/")
+	go http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 	fmt.Println("Start serve")
-	for update := range updates {
-
-		if update.Message == nil {
-			continue
-		}
-		chatID := update.Message.Chat.ID
-		if update.Message.IsCommand() {
-			switch update.Message.Command() {
-			case "start":
-				msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(afterStart, update.Message.Chat.UserName))
-				msg.ReplyMarkup = firstBtn
-				if _, err := bot.Send(msg); err != nil {
-					panic(err)
+	for {
+		select {
+		case update := <-updates:
+			if update.Message == nil {
+				return
+			}
+			chatID := update.Message.Chat.ID
+			if update.Message.IsCommand() {
+				switch update.Message.Command() {
+				case "start":
+					counter++
+					lastUpdate[chatID] = time.Now()
+					msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(afterStart, update.Message.Chat.UserName))
+					msg.ReplyMarkup = firstBtn
+					if _, err := bot.Send(msg); err != nil {
+						panic(err)
+					}
+				case "stat":
+					msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("%v", counter))
+					if _, err := bot.Send(msg); err != nil {
+						panic(err)
+					}
 				}
 			}
-		}
-		if update.Message.Text != "" {
-			switch update.Message.Text {
-			case "Получить займ 💸":
-				msg := tgbotapi.NewMessage(chatID, welcome)
-				msg.ReplyMarkup = secondBtn
-				if _, err := bot.Send(msg); err != nil {
-					panic(err)
-				}
+			if update.Message.Text != "" {
+				switch update.Message.Text {
+				case "Получить займ 💸":
+					msg := tgbotapi.NewMessage(chatID, welcome)
+					msg.ReplyMarkup = secondBtn
+					if _, err := bot.Send(msg); err != nil {
+						panic(err)
+					}
 
-			case "До 15.000р 💰":
-				msg := tgbotapi.NewMessage(chatID, credit15)
-				msg.ReplyMarkup = firstBtn
-				if _, err := bot.Send(msg); err != nil {
-					panic(err)
-				}
-			case "До 30.000р 💰":
-				msg := tgbotapi.NewMessage(chatID, credit30)
-				msg.ReplyMarkup = firstBtn
-				if _, err := bot.Send(msg); err != nil {
-					panic(err)
-				}
-			case "До 50.000р 💰":
-				msg := tgbotapi.NewMessage(chatID, credit50)
-				msg.ReplyMarkup = firstBtn
-				if _, err := bot.Send(msg); err != nil {
-					panic(err)
+				case "До 15.000р 💰":
+					msg := tgbotapi.NewMessage(chatID, credit15)
+					msg.ReplyMarkup = firstBtn
+					if _, err := bot.Send(msg); err != nil {
+						panic(err)
+					}
+				case "До 30.000р 💰":
+					msg := tgbotapi.NewMessage(chatID, credit30)
+					msg.ReplyMarkup = firstBtn
+					if _, err := bot.Send(msg); err != nil {
+						panic(err)
+					}
+				case "До 50.000р 💰":
+					msg := tgbotapi.NewMessage(chatID, credit50)
+					msg.ReplyMarkup = firstBtn
+					if _, err := bot.Send(msg); err != nil {
+						panic(err)
+					}
 				}
 			}
+		case _ := <-ticker.C:
+			wakeUp(lastUpdate, bot)
+
 		}
 	}
+}
+
+func wakeUp(lastUpdate map[int64]time.Time, bot *tgbotapi.BotAPI) {
+	timeNow := time.Now()
+	for chatID, lastTime := range lastUpdate {
+		diff := timeNow.Sub(lastTime)
+		if diff > time.Duration(4*time.Hour) {
+			msg := tgbotapi.NewMessage(chatID, timerText)
+			if _, err := bot.Send(msg); err != nil {
+				panic(err)
+			}
+		}
+		lastUpdate[chatID] = timeNow.Add(time.Duration(24) * time.Hour)
+
+	}
+
 }

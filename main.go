@@ -211,7 +211,7 @@ func main() {
 					}
 				}
 			}
-		case _ := <-ticker.C:
+		case _ = <-ticker.C:
 			wakeUp(lastUpdate, bot)
 
 		}

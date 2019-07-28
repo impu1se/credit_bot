@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,12 +12,6 @@ import (
 
 	tgbotapi "github.com/Syfaro/telegram-bot-api"
 	"github.com/go-redis/redis"
-)
-
-const (
-	//url = "https://d43e43ce.ngrok.io/"
-	url      = "https://139.59.10.18/" // prod
-	apiToken = "843667644:AAEB7-te7PfsX2depO8nkeU3ZvNbEyDVpIk"
 )
 
 var textMsg = map[string]string{
@@ -150,39 +145,82 @@ var secondBtn = tgbotapi.NewReplyKeyboard(
 	),
 )
 
+type Config struct {
+	ApiToken string
+	Port     string
+	Address  string
+	Debug    bool
+	Tls      bool
+}
+
+func newConfig() *Config {
+
+	var apiToken, port, addr string
+
+	flag.StringVar(&apiToken, "token", "", "Telegram Bot Token")
+	flag.StringVar(&port, "port", "80", "Port for server")
+	flag.StringVar(&addr, "addr", "localhost", "Address for server")
+	debug := flag.Bool("debug", false, "Debug true/false")
+	tls := flag.Bool("tls", false, "TLS true/false")
+	flag.Parse()
+
+	if apiToken == "" {
+		log.Print("-token is required")
+		os.Exit(1)
+	}
+	config := &Config{
+		ApiToken: apiToken,
+		Port:     port,
+		Address:  addr,
+		Debug:    *debug,
+		Tls:      *tls,
+	}
+	return config
+}
+
 func main() {
 
 	var mutex = &sync.Mutex{}
 
 	client, err := NewClient("localhost:6379", 0)
 	if err != nil {
-		panic("not init redis client")
+		log.Fatal("not init redis client")
 	}
 	for typeText, text := range textMsg {
 		err := setValue(client, typeText, text)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	}
+
 	value, err := getValue(client, "counter")
 	if value == "" {
 		value = "0"
 	}
 	if err := setValue(client, "counter", value); err != nil {
-		panic("can't set counter")
+		log.Fatal("can't set counter")
 	}
 
+	config := newConfig()
+
 	fmt.Println("Running bot...")
-	bot, err := tgbotapi.NewBotAPI(apiToken)
+	bot, err := tgbotapi.NewBotAPI(config.ApiToken)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	bot.Debug = true
+	bot.Debug = config.Debug
 	log.Printf("Authorized on account %s", bot.Self.UserName)
-	_, err = bot.SetWebhook(tgbotapi.NewWebhook(url))
-	if err != nil {
-		log.Fatal(err)
+	if config.Tls {
+		_, err = bot.SetWebhook(tgbotapi.NewWebhookWithCert(config.Address+config.ApiToken, "cert.pem"))
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		_, err = bot.SetWebhook(tgbotapi.NewWebhook(config.Address + config.ApiToken))
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	info, err := bot.GetWebhookInfo()
 	if err != nil {
@@ -194,10 +232,16 @@ func main() {
 
 	ticker := time.NewTicker(10 * time.Minute)
 
-	updates := bot.ListenForWebhook("/")
-	os.Setenv("PORT", "8080") // dev
-	go http.ListenAndServe(":"+os.Getenv("PORT"), nil)
-	fmt.Println("Start serve")
+	updates := bot.ListenForWebhook("/" + bot.Token)
+	if config.Tls {
+		go http.ListenAndServeTLS(":"+config.Port, "cert.pem", "key.key", nil)
+	} else {
+		go http.ListenAndServe(":"+config.Port, nil)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Start server on %v port %v ", config.Address, config.Port)
 	for {
 		select {
 		case update := <-updates:
@@ -212,33 +256,33 @@ func main() {
 					mutex.Lock()
 					counter, err := getValue(client, "counter")
 					if err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 					count, err := strconv.Atoi(counter)
 					if err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 					err = setValue(client, "counter", count+1)
 					if err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 					mutex.Unlock()
 					updateTime := time.Now()
 
 					if err := setValue(client, fmt.Sprintf("%v", chatID), updateTime.Format("15:04:05")); err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 					afterStart, _ := getValue(client, "afterStart")
 					msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(afterStart, update.Message.Chat.UserName))
 					msg.ReplyMarkup = firstBtn
 					if _, err := bot.Send(msg); err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 				case "stat":
 					counter, _ := getValue(client, "counter")
 					msg := tgbotapi.NewMessage(chatID, counter)
 					if _, err := bot.Send(msg); err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 				}
 			}
@@ -276,62 +320,62 @@ func handlingText(text string, chatID int64, bot *tgbotapi.BotAPI, client *redis
 	case "Получить займ 💸":
 		welcome, err := getValue(client, "welcome")
 		if err != nil {
-			panic("Not get value from welcome key")
+			log.Fatal("Not get value from welcome key")
 		}
 		msg := tgbotapi.NewMessage(chatID, welcome)
 		msg.ReplyMarkup = secondBtn
 		if _, err := bot.Send(msg); err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 
 		err = updateTime(client, fmt.Sprintf("%v", chatID), getTime(client, chatID), 4)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 
 	case "До 15.000р 💰":
 		credit15, err := getValue(client, "credit15")
 		if err != nil {
-			panic("Not get value from credit15 key")
+			log.Fatal("Not get value from credit15 key")
 		}
 		msg := tgbotapi.NewMessage(chatID, credit15)
 		msg.ReplyMarkup = firstBtn
 		if _, err := bot.Send(msg); err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		err = updateTime(client, fmt.Sprintf("%v", chatID), getTime(client, chatID), 4)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 
 	case "До 30.000р 💰":
 		credit30, err := getValue(client, "credit30")
 		if err != nil {
-			panic("Not get value from credit30 key")
+			log.Fatal("Not get value from credit30 key")
 		}
 		msg := tgbotapi.NewMessage(chatID, credit30)
 		msg.ReplyMarkup = firstBtn
 		if _, err := bot.Send(msg); err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		err = updateTime(client, fmt.Sprintf("%v", chatID), getTime(client, chatID), 4)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 
 	case "До 50.000р 💰":
 		credit50, err := getValue(client, "credit50")
 		if err != nil {
-			panic("Not get value from credit50 key")
+			log.Fatal("Not get value from credit50 key")
 		}
 		msg := tgbotapi.NewMessage(chatID, credit50)
 		msg.ReplyMarkup = firstBtn
 		if _, err := bot.Send(msg); err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		err = updateTime(client, fmt.Sprintf("%v", chatID), getTime(client, chatID), 4)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	}
 }
@@ -340,11 +384,11 @@ func getTime(client *redis.Client, chatID int64) time.Time {
 	intChatID := strconv.Itoa(int(chatID))
 	lastActive, err := getValue(client, intChatID)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	t, err := time.Parse("15:04:05", lastActive)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	return t
 }
@@ -352,35 +396,35 @@ func getTime(client *redis.Client, chatID int64) time.Time {
 func wakeUp(bot *tgbotapi.BotAPI, client *redis.Client) {
 	chatIds, err := client.LRange("chatIds", 0, -1).Result()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	for _, chatId := range chatIds {
 		lastTime, err := getValue(client, chatId)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		timeNow := time.Now()
 		t, err := time.Parse("15:04:05", lastTime)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 
 		diff := timeNow.Sub(t)
 		if diff > time.Duration(4*time.Hour) {
 			timerText, err := getValue(client, "timerText")
 			if err != nil {
-				panic("Not get value from timer text key")
+				log.Fatalf("not get value from timer text key with err %v", err)
 			}
 			intChatId, err := strconv.Atoi(chatId)
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 			msg := tgbotapi.NewMessage(int64(intChatId), timerText)
 			if _, err := bot.Send(msg); err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 			if err := updateTime(client, chatId, timeNow, 24); err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 		}
 	}
@@ -389,7 +433,7 @@ func wakeUp(bot *tgbotapi.BotAPI, client *redis.Client) {
 func updateTime(client *redis.Client, chatId string, lastTime time.Time, hour int) error {
 	err := setValue(client, chatId, lastTime.Add(time.Duration(hour)*time.Hour).Format("15:04:05"))
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	return nil
 }

@@ -217,7 +217,7 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		_, err = bot.SetWebhook(tgbotapi.NewWebhook(config.Address + config.ApiToken))
+		_, err = bot.SetWebhook(tgbotapi.NewWebhook(config.Address + "/" + config.ApiToken))
 		if err != nil {
 			log.Fatal(err)
 		}

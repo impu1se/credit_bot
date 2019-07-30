@@ -212,7 +212,7 @@ func main() {
 	bot.Debug = config.Debug
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 	if config.Tls {
-		_, err = bot.SetWebhook(tgbotapi.NewWebhookWithCert(config.Address+config.ApiToken, "cert.pem"))
+		_, err = bot.SetWebhook(tgbotapi.NewWebhookWithCert(config.Address+"/"+config.ApiToken, "cert.pem"))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -423,7 +423,7 @@ func wakeUp(bot *tgbotapi.BotAPI, client *redis.Client) {
 			if _, err := bot.Send(msg); err != nil {
 				log.Fatal(err)
 			}
-			if err := updateTime(client, chatId, timeNow, 24); err != nil {
+			if err := updateTime(client, chatId, timeNow, 18); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -431,9 +431,11 @@ func wakeUp(bot *tgbotapi.BotAPI, client *redis.Client) {
 }
 
 func updateTime(client *redis.Client, chatId string, lastTime time.Time, hour int) error {
-	err := setValue(client, chatId, lastTime.Add(time.Duration(hour)*time.Hour).Format("15:04:05"))
+	newTime := lastTime.Add(time.Duration(hour) * time.Hour).Format("15:04:05")
+	err := setValue(client, chatId, newTime)
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("update chatid %v from %v time to new %v time", chatId, lastTime, newTime)
 	return nil
 }

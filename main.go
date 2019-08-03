@@ -168,14 +168,14 @@ func newConfig() *Config {
 		log.Print("-token is required")
 		os.Exit(1)
 	}
-	config := &Config{
+
+	return &Config{
 		ApiToken: apiToken,
 		Port:     port,
 		Address:  addr,
 		Debug:    *debug,
 		Tls:      *tls,
 	}
-	return config
 }
 
 func main() {
@@ -238,10 +238,8 @@ func main() {
 	} else {
 		go http.ListenAndServe(":"+config.Port, nil)
 	}
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Start server on %v port %v ", config.Address, config.Port)
+
+	fmt.Printf("Start server on %v:%v ", config.Address, config.Port)
 	for {
 		select {
 		case update := <-updates:
@@ -269,7 +267,7 @@ func main() {
 					mutex.Unlock()
 					updateTime := time.Now()
 
-					if err := setValue(client, fmt.Sprintf("%v", chatID), updateTime.Format("15:04:05")); err != nil {
+					if err := setValue(client, fmt.Sprintf("%v", chatID), updateTime.Format("2006-01-02T15:04:05")); err != nil {
 						log.Fatal(err)
 					}
 					afterStart, _ := getValue(client, "afterStart")
@@ -381,12 +379,12 @@ func handlingText(text string, chatID int64, bot *tgbotapi.BotAPI, client *redis
 }
 
 func getTime(client *redis.Client, chatID int64) time.Time {
-	intChatID := strconv.Itoa(int(chatID))
-	lastActive, err := getValue(client, intChatID)
+	strChatID := strconv.Itoa(int(chatID))
+	lastActive, err := getValue(client, strChatID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	t, err := time.Parse("15:04:05", lastActive)
+	t, err := time.Parse("2006-01-02T15:04:05", lastActive)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -404,7 +402,7 @@ func wakeUp(bot *tgbotapi.BotAPI, client *redis.Client) {
 			log.Fatal(err)
 		}
 		timeNow := time.Now()
-		t, err := time.Parse("15:04:05", lastTime)
+		t, err := time.Parse("2006-01-02T15:04:05", lastTime)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -423,7 +421,7 @@ func wakeUp(bot *tgbotapi.BotAPI, client *redis.Client) {
 			if _, err := bot.Send(msg); err != nil {
 				log.Fatal(err)
 			}
-			if err := updateTime(client, chatId, timeNow, 18); err != nil {
+			if err := updateTime(client, chatId, timeNow, 24); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -431,7 +429,7 @@ func wakeUp(bot *tgbotapi.BotAPI, client *redis.Client) {
 }
 
 func updateTime(client *redis.Client, chatId string, lastTime time.Time, hour int) error {
-	newTime := lastTime.Add(time.Duration(hour) * time.Hour).Format("15:04:05")
+	newTime := lastTime.Add(time.Duration(hour) * time.Hour).Format("2006-01-02T15:04:05")
 	err := setValue(client, chatId, newTime)
 	if err != nil {
 		log.Fatal(err)

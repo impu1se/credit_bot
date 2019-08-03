@@ -386,7 +386,8 @@ func getTime(client *redis.Client, chatID int64) time.Time {
 	}
 	t, err := time.Parse("2006-01-02T15:04:05", lastActive)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("can't parse time")
+		t = time.Now()
 	}
 	return t
 }

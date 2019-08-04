@@ -2,9 +2,9 @@
 
 ## RUN 
 
-`nohup ./credit_bot
-  -token=843667644:AAEB7-te7PfsX2depO8nkeU3ZvNbEyDVpIk  
-  -addr=139.59.10.18   
-  -port=443  
+nohup ./credit_bot  
+  -token=token  
+  -addr=addr   
+  -port=80 or 443  
   -debug=true  
-  -tls=true`
+  -tls=true

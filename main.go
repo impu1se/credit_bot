@@ -212,7 +212,7 @@ func main() {
 	bot.Debug = config.Debug
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 	if config.Tls {
-		_, err = bot.SetWebhook(tgbotapi.NewWebhookWithCert(config.Address+"/"+config.ApiToken, "cert.pem"))
+		_, err = bot.SetWebhook(tgbotapi.NewWebhookWithCert(config.Address+"/"+config.ApiToken, os.Getenv("CREDIT_CERT")))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -234,7 +234,7 @@ func main() {
 
 	updates := bot.ListenForWebhook("/" + bot.Token)
 	if config.Tls {
-		go http.ListenAndServeTLS(":"+config.Port, "cert.pem", "key.key", nil)
+		go http.ListenAndServeTLS(":"+config.Port, os.Getenv("CREDIT_CERT"), os.Getenv("CREDIT_KEY"), nil)
 	} else {
 		go http.ListenAndServe(":"+config.Port, nil)
 	}

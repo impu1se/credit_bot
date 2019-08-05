@@ -326,7 +326,7 @@ func handlingText(text string, chatID int64, bot *tgbotapi.BotAPI, client *redis
 			log.Fatal(err)
 		}
 
-		err = updateTime(client, fmt.Sprintf("%v", chatID), getTime(client, chatID), 4)
+		err = updateTime(client, fmt.Sprintf("%v", chatID), getTime(client, chatID), 0)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -341,7 +341,7 @@ func handlingText(text string, chatID int64, bot *tgbotapi.BotAPI, client *redis
 		if _, err := bot.Send(msg); err != nil {
 			log.Fatal(err)
 		}
-		err = updateTime(client, fmt.Sprintf("%v", chatID), getTime(client, chatID), 4)
+		err = updateTime(client, fmt.Sprintf("%v", chatID), getTime(client, chatID), 0)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -356,7 +356,7 @@ func handlingText(text string, chatID int64, bot *tgbotapi.BotAPI, client *redis
 		if _, err := bot.Send(msg); err != nil {
 			log.Fatal(err)
 		}
-		err = updateTime(client, fmt.Sprintf("%v", chatID), getTime(client, chatID), 4)
+		err = updateTime(client, fmt.Sprintf("%v", chatID), getTime(client, chatID), 0)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -371,7 +371,7 @@ func handlingText(text string, chatID int64, bot *tgbotapi.BotAPI, client *redis
 		if _, err := bot.Send(msg); err != nil {
 			log.Fatal(err)
 		}
-		err = updateTime(client, fmt.Sprintf("%v", chatID), getTime(client, chatID), 4)
+		err = updateTime(client, fmt.Sprintf("%v", chatID), getTime(client, chatID), 0)
 		if err != nil {
 			log.Fatal(err)
 		}

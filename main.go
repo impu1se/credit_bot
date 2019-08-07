@@ -114,6 +114,8 @@ CreditPlus - первый займ до 15 000 руб. без переплаты
 `,
 }
 
+const layout = "2006-01-02T15:04:05"
+
 func NewClient(addr string, db int) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
@@ -267,7 +269,7 @@ func main() {
 					mutex.Unlock()
 					updateTime := time.Now()
 
-					if err := setValue(client, fmt.Sprintf("%v", chatID), updateTime.Format("2006-01-02T15:04:05")); err != nil {
+					if err := setValue(client, fmt.Sprintf("%v", chatID), updateTime.Format(layout)); err != nil {
 						log.Fatal(err)
 					}
 					afterStart, _ := getValue(client, "afterStart")
@@ -384,7 +386,7 @@ func getTime(client *redis.Client, chatID int64) time.Time {
 	if err != nil {
 		log.Fatal(err)
 	}
-	t, err := time.Parse("2006-01-02T15:04:05", lastActive)
+	t, err := time.Parse(layout, lastActive)
 	if err != nil {
 		log.Printf("can't parse time")
 		t = time.Now()
@@ -403,7 +405,7 @@ func wakeUp(bot *tgbotapi.BotAPI, client *redis.Client) {
 			log.Fatal(err)
 		}
 		timeNow := time.Now()
-		t, err := time.Parse("2006-01-02T15:04:05", lastTime)
+		t, err := time.Parse(layout, lastTime)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -430,7 +432,10 @@ func wakeUp(bot *tgbotapi.BotAPI, client *redis.Client) {
 }
 
 func updateTime(client *redis.Client, chatId string, lastTime time.Time, hour int) error {
-	newTime := lastTime.Add(time.Duration(hour) * time.Hour).Format("2006-01-02T15:04:05")
+	var newTime = time.Now().Format(layout)
+	if hour != 0 {
+		newTime = lastTime.Add(time.Duration(hour) * time.Hour).Format(layout)
+	}
 	err := setValue(client, chatId, newTime)
 	if err != nil {
 		log.Fatal(err)

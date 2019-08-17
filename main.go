@@ -114,7 +114,10 @@ CreditPlus - первый займ до 15 000 руб. без переплаты
 `,
 }
 
-const layout = "2006-01-02T15:04:05"
+const (
+	layout        = "2006-01-02T15:04:05"
+	blockFromUser = "bot was blocked by the user"
+)
 
 func NewClient(addr string, db int) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
@@ -123,8 +126,7 @@ func NewClient(addr string, db int) (*redis.Client, error) {
 		DB:       db, // use default DB
 	})
 
-	_, err := client.Ping().Result()
-	if err != nil {
+	if _, err := client.Ping().Result(); err != nil {
 		return nil, err
 	}
 	return client, nil
@@ -422,7 +424,11 @@ func wakeUp(bot *tgbotapi.BotAPI, client *redis.Client) {
 			}
 			msg := tgbotapi.NewMessage(int64(intChatId), timerText)
 			if _, err := bot.Send(msg); err != nil {
-				log.Fatal(err)
+				if err.Error() == blockFromUser {
+					client.LRem("chatIds", 0, chatId)
+				} else {
+					log.Fatal(err)
+				}
 			}
 			if err := updateTime(client, chatId, timeNow, 24); err != nil {
 				log.Fatal(err)

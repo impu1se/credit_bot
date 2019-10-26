@@ -70,9 +70,11 @@ func (c *CreditBot) Run(bot *tgbotapi.BotAPI) {
 			}
 			if update.Message.IsCommand() {
 				c.commandHandle(bot, &update)
+				continue
 			}
 			if update.Message.Text != "" {
 				c.handlingText(bot, &update)
+				continue
 			}
 		case _ = <-c.Ticker.C:
 			c.wakeUp(bot)
@@ -194,6 +196,16 @@ func (c *CreditBot) wakeUp(bot *tgbotapi.BotAPI) {
 			msg := tgbotapi.NewMessage(int64(intChatId), timerText)
 			if _, err := bot.Send(msg); err != nil {
 				c.Redis.Client.LRem("chatIds", 0, chatId)
+				counter, err := c.Redis.GetValue("counter")
+				if err == nil {
+					count, err := strconv.Atoi(counter)
+					if err == nil {
+						if err := c.Redis.SetValue("counter", count-1); err != nil {
+							fmt.Println()
+						}
+					}
+				}
+				return
 			}
 			if err := c.updateTime(chatId, timeNow, 24); err != nil {
 				log.Print(err)

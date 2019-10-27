@@ -35,7 +35,6 @@ func main() {
 			log.Print(err)
 		}
 		go http.ListenAndServeTLS(":"+conf.Port, os.Getenv("CREDIT_CERT"), os.Getenv("CREDIT_KEY"), nil)
-
 	} else {
 		_, err = bot.SetWebhook(tgbotapi.NewWebhook(conf.Address + "/" + conf.ApiToken))
 		if err != nil {
@@ -59,5 +58,6 @@ func main() {
 
 	fmt.Printf("Start server on %v:%v \n", conf.Address, conf.Port)
 
+	creditBot.InitCounter()
 	creditBot.Run(bot)
 }

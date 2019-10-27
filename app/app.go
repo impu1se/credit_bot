@@ -284,7 +284,7 @@ func (c *CreditBot) adminValidate(update *tgbotapi.Update) bool {
 
 //TODO: Merge with WAKEUP function !!!!
 func (c *CreditBot) forcePush(bot *tgbotapi.BotAPI) {
-	fmt.Println("Start WAKE UP")
+	fmt.Println("Start FORCE PUSH")
 	chatIds, err := c.Redis.Client.LRange("chatIds", 0, -1).Result()
 	if err != nil {
 		log.Println(err)

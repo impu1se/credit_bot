@@ -27,7 +27,7 @@ func main() {
 	}
 
 	bot.Debug = conf.Debug
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	log.Printf("Authorized on account %s\n", bot.Self.UserName)
 
 	if conf.Tls {
 		_, err = bot.SetWebhook(tgbotapi.NewWebhookWithCert(conf.Address+"/"+conf.ApiToken, os.Getenv("CREDIT_CERT")))
@@ -50,14 +50,14 @@ func main() {
 		log.Print(err)
 	}
 	if info.LastErrorDate != 0 {
-		log.Printf("Telegram callback failed: %s", info.LastErrorMessage)
+		log.Printf("Telegram callback failed: %s\n", info.LastErrorMessage)
 	}
 
 	updates := bot.ListenForWebhook("/" + bot.Token)
 
 	creditBot := app.NewCreditBot(conf, client, nil, updates)
 
-	fmt.Printf("Start server on %v:%v ", conf.Address, conf.Port)
+	fmt.Printf("Start server on %v:%v \n", conf.Address, conf.Port)
 
 	creditBot.Run(bot)
 }

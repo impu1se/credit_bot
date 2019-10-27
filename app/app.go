@@ -45,7 +45,7 @@ func NewCreditBot(conf config.Config, client *db.MyRedis, postgres interface{}, 
 		Redis:    client,
 		Postgres: postgres,
 		Updates:  update,
-		Ticker:   time.NewTicker(60 * time.Second)}
+		Ticker:   time.NewTicker(1 * time.Hour)}
 }
 
 func (c *CreditBot) InitCounter() {
@@ -158,21 +158,18 @@ func (c *CreditBot) wakeUp(bot *tgbotapi.BotAPI) {
 	}
 	for _, chatId := range chatIds {
 		lastTime, err := c.Redis.GetValue(chatId)
-		fmt.Printf("last time %v from chatId %v\n", lastTime, chatId)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 		timeNow := time.Now().UTC()
 		t, err := time.Parse(layout, lastTime)
-		fmt.Printf("time now %v from chatId %v\n", timeNow, chatId)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 		diff := timeNow.Sub(t)
-		fmt.Printf("diff time %v from chatId %v\n", diff, chatId)
-		if diff > 1*time.Second {
+		if diff > 4*time.Hour {
 			timerText, err := c.Redis.GetValue("timerText")
 			if err != nil {
 				log.Println("not get value from timer text key with err:", err)
@@ -204,8 +201,6 @@ func (c *CreditBot) wakeUp(bot *tgbotapi.BotAPI) {
 			}
 			continue
 		}
-		fmt.Println("Time diff:", diff)
-
 	}
 }
 

@@ -151,23 +151,27 @@ func (c *CreditBot) updateText(bot *tgbotapi.BotAPI, chatID int64, text string) 
 func (c *CreditBot) wakeUp(bot *tgbotapi.BotAPI) {
 	fmt.Println("Start WAKE UP")
 	chatIds, err := c.Redis.Client.LRange("chatIds", 0, -1).Result()
+	fmt.Printf("chats ids: %v\n", chatIds)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	for _, chatId := range chatIds {
 		lastTime, err := c.Redis.GetValue(chatId)
+		fmt.Printf("last time %v from chatId %v\n", lastTime, chatId)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 		timeNow := time.Now().UTC()
 		t, err := time.Parse(layout, lastTime)
+		fmt.Printf("time now %v from chatId %v\n", timeNow, chatId)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 		diff := timeNow.Sub(t)
+		fmt.Printf("diff time %v from chatId %v\n", diff, chatId)
 		if diff > 1*time.Second {
 			timerText, err := c.Redis.GetValue("timerText")
 			if err != nil {

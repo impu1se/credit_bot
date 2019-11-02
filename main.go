@@ -16,9 +16,9 @@ import (
 
 func main() {
 
-	client := db.NewClient("localhost:6379", 0)
-
 	conf := config.NewConfig()
+
+	client := db.NewClient(*conf)
 
 	fmt.Println("Running bot...")
 	bot, err := tgbotapi.NewBotAPI(conf.ApiToken)
@@ -54,7 +54,7 @@ func main() {
 
 	updates := bot.ListenForWebhook("/" + bot.Token)
 
-	creditBot := app.NewCreditBot(conf, client, nil, updates)
+	creditBot := app.NewCreditBot(*conf, client, nil, updates)
 
 	fmt.Printf("Start server on %v:%v \n", conf.Address, conf.Port)
 

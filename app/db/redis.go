@@ -3,6 +3,8 @@ package db
 import (
 	"log"
 
+	"github.com/impu1se/credit_bot/app/config"
+
 	"github.com/impu1se/credit_bot/app/messages"
 
 	"github.com/go-redis/redis"
@@ -12,15 +14,19 @@ type MyRedis struct {
 	Client *redis.Client
 }
 
-func NewClient(addr string, db int) *MyRedis {
+func NewClient(conf config.Config) *MyRedis {
+	if conf.RedisPort != "" {
+		conf.RedisHost = conf.RedisHost + ":" + conf.RedisPort
+	}
 	client := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: "", // no password set
-		DB:       db, // use default DB
+		Addr:     conf.RedisHost,
+		Password: "",           // no password set
+		DB:       conf.RedisDb, // use default DB
 	})
 
+	log.Println("trying connect to:", client.String())
 	if _, err := client.Ping().Result(); err != nil {
-		log.Print(err)
+		log.Fatal(err)
 	}
 	cli := &MyRedis{client}
 	cli.initText(messages.TextMsg)

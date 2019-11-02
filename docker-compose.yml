@@ -1,0 +1,33 @@
+---
+
+version: '3'
+
+services:
+
+  redis:
+    container_name: redis
+    image: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ../data/redis:/data
+    entrypoint: redis-server --appendonly yes
+    restart: always
+    networks:
+      - backend
+
+  credit_bot:
+    container_name: credit_bot
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    env_file: '.env'
+    depends_on:
+      - redis
+    networks: # Networks to join (Services on the same network can communicate with each other using their name)
+      - backend
+
+networks:
+  backend:

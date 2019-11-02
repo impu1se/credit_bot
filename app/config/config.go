@@ -1,40 +1,30 @@
 package config
 
 import (
-	"flag"
 	"log"
-	"os"
+
+	"github.com/kelseyhightower/envconfig"
 )
 
+const appName = "credit_bot"
+
 type Config struct {
-	ApiToken string
-	Port     string
-	Address  string
-	Debug    bool
-	Tls      bool
+	ApiToken  string `required:"true"`
+	Port      string `default:"80"`
+	Address   string `required:"true"`
+	Debug     bool   `default:"true"`
+	Tls       bool   `default:"false"`
+	RedisHost string `default:"localhost"`
+	RedisPort string
+	RedisDb   int `default:"0"`
 }
 
-func NewConfig() Config {
+func NewConfig() *Config {
 
-	var apiToken, port, addr string
-
-	flag.StringVar(&apiToken, "token", "", "Telegram Bot Token")
-	flag.StringVar(&port, "port", "80", "Port for server")
-	flag.StringVar(&addr, "addr", "localhost", "Address for server")
-	debug := flag.Bool("debug", false, "Debug true/false")
-	tls := flag.Bool("tls", false, "TLS true/false")
-	flag.Parse()
-
-	if apiToken == "" {
-		log.Print("-token is required")
-		os.Exit(1)
+	var c Config
+	err := envconfig.Process(appName, &c)
+	if err != nil {
+		log.Fatal(err.Error())
 	}
-
-	return Config{
-		ApiToken: apiToken,
-		Port:     port,
-		Address:  addr,
-		Debug:    *debug,
-		Tls:      *tls,
-	}
+	return &c
 }

@@ -9,12 +9,12 @@ var FirstBtn = tgbotapi.NewReplyKeyboard(
 )
 var SecondBtn = tgbotapi.NewReplyKeyboard(
 	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton("До 15.000р 💰"),
+		tgbotapi.NewKeyboardButton("От 100 грн.💰"),
 	),
 	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton("До 30.000р 💰"),
+		tgbotapi.NewKeyboardButton("От 200-400 грн.💰"),
 	),
 	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton("До 50.000р 💰"),
+		tgbotapi.NewKeyboardButton("От 500-1000 грн.💰"),
 	),
 )

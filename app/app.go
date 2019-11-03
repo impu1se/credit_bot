@@ -33,10 +33,10 @@ type CreditBot struct {
 }
 
 var valueFromRedis = map[string]string{
-	"Получить займ 💸": "welcome",
-	"До 15.000р 💰":    "credit15",
-	"До 30.000р 💰":    "credit30",
-	"До 50.000р 💰":    "credit50",
+	"Получить займ 💸":   "welcome",
+	"От 100 грн.💰":      "credit15",
+	"От 200-400 грн.💰":  "credit30",
+	"От 500-1000 грн.💰": "credit50",
 }
 
 func NewCreditBot(conf config.Config, client *db.MyRedis, postgres interface{}, update tgbotapi.UpdatesChannel) *CreditBot {
@@ -116,15 +116,15 @@ func (c *CreditBot) handlingTexts(bot *tgbotapi.BotAPI, update *tgbotapi.Update)
 		if err := c.handleText(bot, valueFromRedis[update.Message.Text], chatID, buttons.SecondBtn); err != nil {
 			fmt.Print(err)
 		}
-	case "До 15.000р 💰":
+	case "От 100 грн.💰":
 		if err := c.handleText(bot, valueFromRedis[update.Message.Text], chatID, buttons.FirstBtn); err != nil {
 			fmt.Print(err)
 		}
-	case "До 30.000р 💰":
+	case "От 200-400 грн.💰":
 		if err := c.handleText(bot, valueFromRedis[update.Message.Text], chatID, buttons.FirstBtn); err != nil {
 			fmt.Print(err)
 		}
-	case "До 50.000р 💰":
+	case "От 500-1000 грн.💰":
 		if err := c.handleText(bot, valueFromRedis[update.Message.Text], chatID, buttons.FirstBtn); err != nil {
 			fmt.Print(err)
 		}

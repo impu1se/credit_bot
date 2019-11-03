@@ -150,7 +150,7 @@ func (c *CreditBot) updateText(bot *tgbotapi.BotAPI, chatID int64, text string) 
 
 func (c *CreditBot) wakeUp(bot *tgbotapi.BotAPI) {
 	fmt.Println("Start WAKE UP")
-	chatIds, err := c.Redis.Client.LRange("chatIds", 0, -1).Result()
+	chatIds, err := c.Redis.Client.SMembers("chatIds").Result()
 	if err != nil {
 		log.Println(err)
 		return
@@ -183,7 +183,7 @@ func (c *CreditBot) wakeUp(bot *tgbotapi.BotAPI) {
 			msg := tgbotapi.NewMessage(int64(intChatId), timerText)
 			if _, err := bot.Send(msg); err != nil {
 				log.Printf("didn't push to chat: %v \n", chatId)
-				c.Redis.Client.LRem("chatIds", 0, chatId)
+				c.Redis.Client.SRem("chatIds", chatId)
 				counter, err := c.Redis.GetValue("counter")
 				if err == nil {
 					count, err := strconv.Atoi(counter)
@@ -249,7 +249,7 @@ func (c *CreditBot) handleText(bot *tgbotapi.BotAPI, value string, chatID int64,
 	return nil
 }
 func (c *CreditBot) handleCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update, chatID int64, button tgbotapi.ReplyKeyboardMarkup) {
-	c.Redis.Client.LPush("chatIds", chatID)
+	c.Redis.Client.SAdd("chatIds", chatID)
 	c.Mutex.Lock()
 
 	counter, err := c.Redis.GetValue("counter")
@@ -285,7 +285,7 @@ func (c *CreditBot) adminValidate(update *tgbotapi.Update) bool {
 //TODO: Merge with WAKEUP function !!!!
 func (c *CreditBot) forcePush(bot *tgbotapi.BotAPI) {
 	fmt.Println("Start FORCE PUSH")
-	chatIds, err := c.Redis.Client.LRange("chatIds", 0, -1).Result()
+	chatIds, err := c.Redis.Client.SMembers("chatIds").Result()
 	if err != nil {
 		log.Println(err)
 		return
@@ -304,7 +304,7 @@ func (c *CreditBot) forcePush(bot *tgbotapi.BotAPI) {
 		msg := tgbotapi.NewMessage(int64(intChatId), timerText)
 		if _, err := bot.Send(msg); err != nil {
 			log.Printf("didn't push to chat: %v \n", chatId)
-			c.Redis.Client.LRem("chatIds", 0, chatId)
+			c.Redis.Client.SRem("chatIds", chatId)
 			counter, err := c.Redis.GetValue("counter")
 			if err == nil {
 				count, err := strconv.Atoi(counter)

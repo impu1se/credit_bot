@@ -151,18 +151,18 @@ func (c *CreditBot) updateText(bot *tgbotapi.BotAPI, chatID int64, text string) 
 func (c *CreditBot) wakeUp(bot *tgbotapi.BotAPI) {
 	fmt.Println("Start WAKE UP")
 	chatIds, err := c.Redis.Client.LRange("chatIds", 0, -1).Result()
-	fmt.Printf("chats ids: %v\n", chatIds)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	timeNow := time.Now().UTC()
+
 	for _, chatId := range chatIds {
 		lastTime, err := c.Redis.GetValue(chatId)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
-		timeNow := time.Now().UTC()
 		t, err := time.Parse(layout, lastTime)
 		if err != nil {
 			log.Println(err)
@@ -193,13 +193,12 @@ func (c *CreditBot) wakeUp(bot *tgbotapi.BotAPI) {
 						}
 					}
 				}
-				return
+				continue
 			}
 			log.Printf("push successful to chat : %v\n", chatId)
 			if err := c.updateTime(chatId, timeNow, 24); err != nil {
 				log.Print(err)
 			}
-			continue
 		}
 	}
 }
@@ -315,11 +314,8 @@ func (c *CreditBot) forcePush(bot *tgbotapi.BotAPI) {
 					}
 				}
 			}
-			return
+			continue
 		}
 		log.Printf("push successful to chat : %v\n", chatId)
-		if err := c.updateTime(chatId, time.Now().UTC(), 24); err != nil {
-			log.Print(err)
-		}
 	}
 }

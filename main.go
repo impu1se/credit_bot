@@ -6,6 +6,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/impu1se/credit_bot/app/metrics"
+
 	"github.com/impu1se/credit_bot/app"
 
 	"github.com/impu1se/credit_bot/app/config"
@@ -18,7 +24,7 @@ func main() {
 
 	conf := config.NewConfig()
 
-	client := db.NewClient(*conf)
+	clientRedis := db.NewClientRedis(*conf)
 
 	fmt.Println("Running bot...")
 	bot, err := tgbotapi.NewBotAPI(conf.ApiToken)
@@ -41,7 +47,6 @@ func main() {
 			log.Print(err)
 		}
 		go http.ListenAndServe(":"+conf.Port, nil)
-
 	}
 
 	info, err := bot.GetWebhookInfo()
@@ -54,10 +59,20 @@ func main() {
 
 	updates := bot.ListenForWebhook("/" + bot.Token)
 
-	creditBot := app.NewCreditBot(*conf, client, nil, updates)
+	metric := metrics.New()
+
+	creditBot := app.NewCreditBot(*conf, clientRedis, nil, updates, metric)
 
 	fmt.Printf("Start server on %v:%v \n", conf.Address, conf.Port)
 
-	creditBot.InitCounter()
+	err = creditBot.InitCreditBot()
+	if err != nil {
+		log.Panicf("can't init credit bot with err: %v\n", err)
+	}
+
+	prometheus.MustRegister(creditBot.Metrics.Collectors()...)
+	http.Handle("/metrics", promhttp.Handler())
+	go http.ListenAndServe(":9010", nil)
+
 	creditBot.Run(bot)
 }

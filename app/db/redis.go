@@ -14,7 +14,7 @@ type MyRedis struct {
 	Client *redis.Client
 }
 
-func NewClient(conf config.Config) *MyRedis {
+func NewClientRedis(conf config.Config) *MyRedis {
 	if conf.RedisPort != "" {
 		conf.RedisHost = conf.RedisHost + ":" + conf.RedisPort
 	}
@@ -28,6 +28,7 @@ func NewClient(conf config.Config) *MyRedis {
 	if _, err := client.Ping().Result(); err != nil {
 		log.Fatal(err)
 	}
+	log.Println("connected successful...")
 	cli := &MyRedis{client}
 	cli.initText(messages.TextMsg)
 	return cli

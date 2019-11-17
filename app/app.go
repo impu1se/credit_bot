@@ -1,12 +1,15 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/impu1se/credit_bot/app/metrics"
 
 	"github.com/impu1se/credit_bot/app/messages"
 
@@ -30,6 +33,7 @@ type CreditBot struct {
 	Postgres interface{}
 	Mutex    sync.Mutex
 	Ticker   *time.Ticker
+	Metrics  *metrics.Container
 }
 
 var valueFromRedis = map[string]string{
@@ -39,16 +43,45 @@ var valueFromRedis = map[string]string{
 	"От 500-1000 грн.💰": "credit50",
 }
 
-func NewCreditBot(conf config.Config, client *db.MyRedis, postgres interface{}, update tgbotapi.UpdatesChannel) *CreditBot {
+func NewCreditBot(conf config.Config, client *db.MyRedis, postgres interface{}, update tgbotapi.UpdatesChannel, container *metrics.Container) *CreditBot {
 	return &CreditBot{
 		Config:   conf,
 		Redis:    client,
 		Postgres: postgres,
 		Updates:  update,
-		Ticker:   time.NewTicker(1 * time.Hour)}
+		Ticker:   time.NewTicker(10 * time.Minute),
+		Metrics:  container}
 }
 
-func (c *CreditBot) InitCounter() {
+func (c *CreditBot) InitCreditBot() error {
+	err := c.initRedisCounter()
+	if err != nil {
+		return err
+	}
+
+	err = c.initMetricsValue()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *CreditBot) initMetricsValue() error {
+	value, err := c.Redis.GetValue("counter")
+	if err != nil {
+		log.Println("can't get value counter with err:", err)
+		return err
+	}
+	count, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return err
+	}
+	c.Metrics.SetActiveUsers(count)
+	fmt.Println("set active user with count :", count)
+	return nil
+}
+
+func (c *CreditBot) initRedisCounter() error {
 	value, err := c.Redis.GetValue("counter")
 	if err != nil {
 		log.Println("can't get value counter with err:", err)
@@ -57,8 +90,9 @@ func (c *CreditBot) InitCounter() {
 		value = "0"
 	}
 	if err := c.Redis.SetValue("counter", value); err != nil {
-		log.Println("can't set counter")
+		return errors.New("can't set counter")
 	}
+	return nil
 }
 
 func (c *CreditBot) Run(bot *tgbotapi.BotAPI) {
@@ -87,7 +121,8 @@ func (c *CreditBot) handlingCommands(bot *tgbotapi.BotAPI, update *tgbotapi.Upda
 	chatID := update.Message.Chat.ID
 	switch update.Message.Command() {
 	case "start":
-		c.handleCommand(bot, update, chatID, buttons.FirstBtn)
+		c.handleStart(bot, update, chatID, buttons.FirstBtn)
+		c.Metrics.ActiveUsersInc()
 		return
 	case "stat":
 		isAdmin := c.adminValidate(update)
@@ -116,18 +151,22 @@ func (c *CreditBot) handlingTexts(bot *tgbotapi.BotAPI, update *tgbotapi.Update)
 		if err := c.handleText(bot, valueFromRedis[update.Message.Text], chatID, buttons.SecondBtn); err != nil {
 			fmt.Print(err)
 		}
+		c.Metrics.CountPushButton(update.Message.Text)
 	case "От 100 грн.💰":
-		if err := c.handleText(bot, valueFromRedis[update.Message.Text], chatID, buttons.FirstBtn); err != nil {
+		if err := c.handleText(bot, valueFromRedis[update.Message.Text], chatID, buttons.SecondBtn); err != nil {
 			fmt.Print(err)
 		}
+		c.Metrics.CountPushButton(update.Message.Text)
 	case "От 200-400 грн.💰":
-		if err := c.handleText(bot, valueFromRedis[update.Message.Text], chatID, buttons.FirstBtn); err != nil {
+		if err := c.handleText(bot, valueFromRedis[update.Message.Text], chatID, buttons.SecondBtn); err != nil {
 			fmt.Print(err)
 		}
+		c.Metrics.CountPushButton(update.Message.Text)
 	case "От 500-1000 грн.💰":
-		if err := c.handleText(bot, valueFromRedis[update.Message.Text], chatID, buttons.FirstBtn); err != nil {
+		if err := c.handleText(bot, valueFromRedis[update.Message.Text], chatID, buttons.SecondBtn); err != nil {
 			fmt.Print(err)
 		}
+		c.Metrics.CountPushButton(update.Message.Text)
 	default:
 		c.updateText(bot, chatID, update.Message.Text)
 	}
@@ -189,8 +228,9 @@ func (c *CreditBot) wakeUp(bot *tgbotapi.BotAPI) {
 					count, err := strconv.Atoi(counter)
 					if err == nil {
 						if err := c.Redis.SetValue("counter", count-1); err != nil {
-							fmt.Println()
+							fmt.Println("can't decrease user count")
 						}
+						c.Metrics.ActiveUsersDec()
 					}
 				}
 				continue
@@ -220,7 +260,7 @@ func (c *CreditBot) getTime(chatID int64) time.Time {
 func (c *CreditBot) updateTime(chatId string, lastTime time.Time, hour int) error {
 	var newTime = time.Now().UTC().Format(layout)
 	if hour != 0 {
-		newTime = lastTime.Add(time.Duration(hour) * time.Hour).UTC().Format(layout)
+		newTime = lastTime.Add(time.Duration(hour) * time.Hour).Format(layout)
 	}
 	err := c.Redis.SetValue(chatId, newTime)
 	if err != nil {
@@ -248,7 +288,8 @@ func (c *CreditBot) handleText(bot *tgbotapi.BotAPI, value string, chatID int64,
 	}
 	return nil
 }
-func (c *CreditBot) handleCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update, chatID int64, button tgbotapi.ReplyKeyboardMarkup) {
+
+func (c *CreditBot) handleStart(bot *tgbotapi.BotAPI, update *tgbotapi.Update, chatID int64, button tgbotapi.ReplyKeyboardMarkup) {
 	c.Redis.Client.SAdd("chatIds", chatID)
 	c.Mutex.Lock()
 
@@ -290,12 +331,13 @@ func (c *CreditBot) forcePush(bot *tgbotapi.BotAPI) {
 		log.Println(err)
 		return
 	}
+	timerText, err := c.Redis.GetValue("timerText")
+	if err != nil {
+		log.Println("not get value from timer text key with err:", err)
+		return
+	}
 	for _, chatId := range chatIds {
-		timerText, err := c.Redis.GetValue("timerText")
-		if err != nil {
-			log.Println("not get value from timer text key with err:", err)
-			return
-		}
+
 		intChatId, err := strconv.Atoi(chatId)
 		if err != nil {
 			log.Print(err)

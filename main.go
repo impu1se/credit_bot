@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/impu1se/credit_bot/app/metrics"
 
@@ -63,16 +62,16 @@ func main() {
 
 	creditBot := app.NewCreditBot(*conf, clientRedis, nil, updates, metric)
 
+	prometheus.MustRegister(creditBot.Metrics.Collectors()...)
+	http.Handle("/metrics", promhttp.Handler())
+	go http.ListenAndServe(":9010", nil)
+
 	fmt.Printf("Start server on %v:%v \n", conf.Address, conf.Port)
 
 	err = creditBot.InitCreditBot()
 	if err != nil {
 		log.Panicf("can't init credit bot with err: %v\n", err)
 	}
-
-	prometheus.MustRegister(creditBot.Metrics.Collectors()...)
-	http.Handle("/metrics", promhttp.Handler())
-	go http.ListenAndServe(":9010", nil)
 
 	creditBot.Run(bot)
 }
